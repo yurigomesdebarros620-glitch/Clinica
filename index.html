@@ -132,9 +132,10 @@
             }
         ];
 
+        // Lista de profissionais atualizada com os arquivos locais das fotos
         const professionalsList = [
-            { id: 1, name: "Dra. Marina", role: "Biomédica Esteta" },
-            { id: 2, name: "Dra. Odara", role: "Dermatofuncional" }
+            { id: 1, name: "Dra. Marina", role: "Especialista em Harmonização", image: "Marina.jpg" },
+            { id: 2, name: "Dra. Odara", role: "Biomédica Esteta", image: "Dara.jpg" }
         ];
 
         const timeSlots = [
@@ -169,14 +170,13 @@
                 if (!procedure || !professional || !date || !time) return;
 
                 const dateObj = new Date(date);
-                // Ajuste de fuso horário simples para garantir a data correta
                 const userTimezoneOffset = dateObj.getTimezoneOffset() * 60000;
                 const correctedDate = new Date(dateObj.getTime() + userTimezoneOffset);
                 const formattedDate = correctedDate.toLocaleDateString('pt-BR');
 
                 const message = `Olá! Gostaria de confirmar meu agendamento 😊%0A%0A📌 Procedimento: ${procedure.title}%0A👩‍⚕️ Profissional: ${professional.name}%0A📅 Data: ${formattedDate}%0A⏰ Horário: ${time}`;
                 
-                const phone = "11993751504"; 
+                const phone = "5548984391233"; 
                 window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
             };
 
@@ -237,10 +237,13 @@
                                                         ? 'bg-[#594A31] text-[#F9F5EF] border-[#594A31]' 
                                                         : 'bg-white border-[#594A31]/20 text-[#594A31] hover:border-[#594A31]'}`}
                                                 >
-                                                    <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg
-                                                        ${bookingData.professional?.id === prof.id ? 'bg-[#F9F5EF] text-[#594A31]' : 'bg-[#594A31]/10'}`}>
-                                                        {prof.name.charAt(4)}
-                                                    </div>
+                                                    {/* Imagem da Profissional Inserida Aqui */}
+                                                    <img 
+                                                        src={prof.image} 
+                                                        alt={prof.name} 
+                                                        className="w-14 h-14 rounded-full object-cover border-2 border-[#594A31]/20 shadow-sm flex-shrink-0 bg-[#F9F5EF]" 
+                                                        onError={(e) => { e.target.onerror = null; e.target.src = 'https://ui-avatars.com/api/?name=' + prof.name + '&background=F9F5EF&color=594A31'; }}
+                                                    />
                                                     <div>
                                                         <p className="font-semibold text-lg">{prof.name}</p>
                                                         <p className={`text-sm ${bookingData.professional?.id === prof.id ? 'text-[#F9F5EF]/80' : 'text-[#594A31]/60'}`}>
@@ -253,44 +256,72 @@
                                     </div>
                                 )}
 
-                                {step === 3 && (
-                                    <div className="animate-fade-in">
-                                        <h3 className="text-2xl text-[#594A31] mb-6 font-light">Quando você gostaria de vir?</h3>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                            <div>
-                                                <label className="block text-sm font-semibold mb-2 uppercase tracking-wide text-[#594A31]">Data</label>
-                                                <input 
-                                                    type="date" 
-                                                    min={new Date().toISOString().split("T")[0]}
-                                                    className="w-full p-4 rounded-lg border border-[#594A31]/20 bg-white focus:outline-none focus:ring-2 focus:ring-[#594A31]/50 text-[#594A31]"
-                                                    onChange={(e) => setBookingData(prev => ({ ...prev, date: e.target.value }))}
-                                                    value={bookingData.date}
-                                                />
-                                            </div>
-                                            
-                                            <div>
-                                                <label className="block text-sm font-semibold mb-2 uppercase tracking-wide text-[#594A31]">Horário Disponível</label>
-                                                <div className="grid grid-cols-3 gap-2">
-                                                    {timeSlots.map(time => (
-                                                        <button
-                                                            key={time}
-                                                            onClick={() => handleSelect('time', time)}
-                                                            disabled={!bookingData.date}
-                                                            className={`py-2 px-1 rounded border text-sm transition-all
-                                                                ${!bookingData.date ? 'opacity-50 cursor-not-allowed bg-gray-100 border-gray-200' : ''}
-                                                                ${bookingData.time === time 
-                                                                    ? 'bg-[#594A31] text-[#F9F5EF] border-[#594A31]' 
-                                                                    : 'bg-white hover:bg-[#594A31]/5 text-[#594A31] border-[#594A31]/20'}
-                                                            `}
-                                                        >
-                                                            {time}
-                                                        </button>
-                                                    ))}
+                                {step === 3 && (() => {
+                                    // Lógica para filtrar horários baseados no dia da semana
+                                    let availableTimes = [];
+                                    let isSunday = false;
+                                    
+                                    if (bookingData.date) {
+                                        const d = new Date(bookingData.date);
+                                        // Ajuste de fuso horário para pegar o dia correto localmente
+                                        const dayOfWeek = new Date(d.getTime() + d.getTimezoneOffset() * 60000).getDay();
+                                        
+                                        if (dayOfWeek === 0) {
+                                            isSunday = true; // 0 = Domingo
+                                        } else if (dayOfWeek === 6) {
+                                            // 6 = Sábado: filtra para mostrar apenas horários até 13:00
+                                            availableTimes = timeSlots.filter(time => time <= "13:00");
+                                        } else {
+                                            // Segunda a Sexta: mostra todos os horários da lista
+                                            availableTimes = timeSlots;
+                                        }
+                                    }
+
+                                    return (
+                                        <div className="animate-fade-in">
+                                            <h3 className="text-2xl text-[#594A31] mb-6 font-light">Quando você gostaria de vir?</h3>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                                <div>
+                                                    <label className="block text-sm font-semibold mb-2 uppercase tracking-wide text-[#594A31]">Data</label>
+                                                    <input 
+                                                        type="date" 
+                                                        min={new Date().toISOString().split("T")[0]}
+                                                        className="w-full p-4 rounded-lg border border-[#594A31]/20 bg-white focus:outline-none focus:ring-2 focus:ring-[#594A31]/50 text-[#594A31]"
+                                                        // Ao mudar a data, limpa o horário para evitar conflitos
+                                                        onChange={(e) => setBookingData(prev => ({ ...prev, date: e.target.value, time: '' }))}
+                                                        value={bookingData.date}
+                                                    />
+                                                </div>
+                                                
+                                                <div>
+                                                    <label className="block text-sm font-semibold mb-2 uppercase tracking-wide text-[#594A31]">Horário Disponível</label>
+                                                    
+                                                    {!bookingData.date ? (
+                                                        <p className="text-sm text-[#594A31]/60 mt-2">Selecione uma data para ver os horários.</p>
+                                                    ) : isSunday ? (
+                                                        <p className="text-sm text-red-500 mt-2 font-medium">A clínica é fechada aos domingos. Por favor, escolha outra data.</p>
+                                                    ) : (
+                                                        <div className="grid grid-cols-3 gap-2">
+                                                            {availableTimes.map(time => (
+                                                                <button
+                                                                    key={time}
+                                                                    onClick={() => handleSelect('time', time)}
+                                                                    className={`py-2 px-1 rounded border text-sm transition-all
+                                                                        ${bookingData.time === time 
+                                                                            ? 'bg-[#594A31] text-[#F9F5EF] border-[#594A31]' 
+                                                                            : 'bg-white hover:bg-[#594A31]/5 text-[#594A31] border-[#594A31]/20'}
+                                                                    `}
+                                                                >
+                                                                    {time}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
-                                )}
+                                    );
+                                })()}
 
                                 {step === 4 && (
                                     <div className="animate-fade-in text-center">
@@ -659,7 +690,8 @@
                                     <div className="mt-12 flex gap-4">
                                         <a href="https://wa.me/5548984391233" target="_blank" rel="noreferrer" className="bg-[#F9F5EF] text-[#594A31] px-8 py-3 rounded-full text-sm font-bold uppercase tracking-wide hover:bg-white transition-colors duration-300">
                                             Chamar no WhatsApp
-                                        </a>
+                                   
+                                            </a>
                                     </div>
                                 </div>
 
@@ -674,7 +706,6 @@
                                         loading="lazy"
                                         className="filter grayscale-[20%] hover:grayscale-0 transition-all duration-500"
                                     ></iframe>
-                                    
                                 </div>
                             </div>
                         </div>
