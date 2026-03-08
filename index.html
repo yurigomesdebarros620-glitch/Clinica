@@ -159,11 +159,13 @@
                 clientPhone: ''
             });
             const [isSubmitting, setIsSubmitting] = useState(false);
+            const [bookingError, setBookingError] = useState('');
 
             const handleNext = () => setStep((prev) => Math.min(prev + 1, 4));
             const handleBack = () => setStep((prev) => Math.max(prev - 1, 1));
 
             const handleSelect = (field, value) => {
+                setBookingError('');
                 setBookingData(prev => ({ ...prev, [field]: value }));
                 if (field !== 'date' && field !== 'clientName' && field !== 'clientPhone') {
                     setTimeout(handleNext, 300); 
@@ -174,20 +176,20 @@
                 const { procedure, professional, date, time, clientName, clientPhone } = bookingData;
                 
                 if (!procedure || !professional || !date || !time || !clientName || !clientPhone) {
-                    alert("Por favor, preencha seu nome e telefone para continuar.");
+                    setBookingError('Por favor, preencha seu nome e telefone para continuar.');
                     return;
                 }
 
                 setIsSubmitting(true);
+                setBookingError('');
 
                 const dateObj = new Date(date);
                 const userTimezoneOffset = dateObj.getTimezoneOffset() * 60000;
                 const correctedDate = new Date(dateObj.getTime() + userTimezoneOffset);
                 const formattedDate = correctedDate.toLocaleDateString('pt-BR');
 
-                // 1. Enviar dados para o Webhook do Make.com
                 try {
-                    await fetch('https://hook.us2.make.com/yl33gflzvlypxkbwjajqjy45k2on7o71', {
+                    const response = await fetch('https://hook.us2.make.com/yl33gflzvlypxkbwjajqjy45k2on7o71', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -199,13 +201,32 @@
                             clientPhone: clientPhone
                         })
                     });
+
+                    const responseText = await response.text();
+                    let result = {};
+
+                    if (responseText) {
+                        try {
+                            result = JSON.parse(responseText);
+                        } catch (parseError) {
+                            console.warn('Resposta do webhook não veio em JSON:', parseError);
+                        }
+                    }
+
+                    if (!response.ok || result.status === 'ocupado') {
+                        setBookingError(result.message || 'Este horário já está ocupado. Escolha outro horário.');
+                        setIsSubmitting(false);
+                        return;
+                    }
                 } catch (error) {
-                    console.error("Erro ao enviar para agenda:", error);
+                    console.error('Erro ao enviar para agenda:', error);
+                    setBookingError('Não foi possível verificar o agendamento agora. Tente novamente.');
+                    setIsSubmitting(false);
+                    return;
                 }
 
                 setIsSubmitting(false);
 
-                // 2. Redirecionar para o WhatsApp
                 const message = `Olá! Gostaria de confirmar meu agendamento 😊%0A%0A👤 Nome: ${clientName}%0A📌 Procedimento: ${procedure.title}%0A👩‍⚕️ Profissional: ${professional.name}%0A📅 Data: ${formattedDate}%0A⏰ Horário: ${time}`;
                 
                 const phone = "5548984391233"; 
@@ -402,6 +423,12 @@
                                             />
                                         </div>
                                     </div>
+
+                                    {bookingError && (
+                                        <p className="max-w-sm mx-auto mb-4 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
+                                            {bookingError}
+                                        </p>
+                                    )}
 
                                     <button 
                                         onClick={handleConfirmBooking}
@@ -718,8 +745,8 @@
                                             </div>
                                             <div>
                                                 <h4 className="text-lg font-medium mb-1">Telefones / WhatsApp</h4>
-                                                <p className="text-[#F9F5EF]/70">(48) 8439-1233</p>
-                                                <p className="text-[#F9F5EF]/70">(48) 9171-8316</p>
+                                                <p className="text-[#F9F5EF]/70">(48) 98439-1233</p>
+                                                <p className="text-[#F9F5EF]/70">(48) 91718-316</p>
                                             </div>
                                         </div>
 
